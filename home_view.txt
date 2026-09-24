@@ -1,0 +1,321 @@
+961:                    AppTab.Home -> {
+962-                        // ========================== HOME VIEW (DATE DIVIDED COLUMNS GRID) ==========================
+963-                        val cardsByDate = remember(filteredCards) {
+964-                            filteredCards.filter { !it.isDeleted && it.type.isNotBlank() }.groupBy { card ->
+965-                                val sdf = SimpleDateFormat("dd MMMM", Locale.getDefault())
+966-                                sdf.format(Date(card.timestamp))
+967-                            }
+968-                        }
+969-                        val sortedDates = remember(cardsByDate) {
+970-                            cardsByDate.keys.sortedByDescending { dateStr ->
+971-                                cardsByDate[dateStr]?.maxOfOrNull { it.timestamp } ?: 0L
+972-                            }
+973-                        }
+974-
+975-                        LazyColumn(
+976-                            state = listState,
+977-                            modifier = Modifier
+978-                                .fillMaxSize()
+979-                                .fadingEdges()
+980-                                .padding(horizontal = 16.dp),
+981-                            contentPadding = PaddingValues(top = 32.dp, bottom = 204.dp),
+982-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+983-                        ) {
+984-                            // Removed top list item overlay per user intent
+985-
+986-                            // Shared screenshot staging portal
+987-                            pendingImageUri?.let { uri ->
+988-                                item {
+989-                                    Box(
+990-                                        modifier = Modifier
+991-                                            .fillMaxWidth()
+992-                                            .shadow(elevation = 2.dp, shape = RoundedCornerShape(18.dp))
+993-                                            .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(18.dp))
+994-                                            .border(0.5.dp, MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(18.dp))
+995-                                            .padding(16.dp)
+996-                                    ) {
+997-                                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+998-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+999-                                                Icon(
+1000-                                                    imageVector = Lucide.Image,
+1001-                                                    contentDescription = null,
+1002-                                                    tint = MaterialTheme.colorScheme.primary,
+1003-                                                    modifier = Modifier.size(20.dp)
+1004-                                                )
+1005-                                                Spacer(modifier = Modifier.width(8.dp))
+1006-                                                Text(
+1007-                                                    text = "Shared Screenshot Detected",
+1008-                                                    fontSize = 14.sp,
+1009-                                                    fontWeight = FontWeight.Bold,
+1010-                                                    color = MaterialTheme.colorScheme.onBackground
+1011-                                                )
+1012-                                            }
+1013-
+1014-                                            Row(
+1015-                                                modifier = Modifier.fillMaxWidth(),
+1016-                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+1017-                                            ) {
+1018-                                                AsyncImage(
+1019-                                                    model = uri,
+1020-                                                    contentDescription = "Shared Preview",
+1021-                                                    modifier = Modifier
+1022-                                                        .size(80.dp)
+1023-                                                        .clip(RoundedCornerShape(12.dp))
+1024-                                                        .border(0.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
+1025-                                                    contentScale = ContentScale.Crop
+1026-                                                )
+1027-
+1028-                                                Column(
+1029-                                                    modifier = Modifier.weight(1f),
+1030-                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+1031-                                                ) {
+1032-                                                    Text(
+1033-                                                        text = "Add custom caption or instructions before synthesizing:",
+1034-                                                        fontSize = 11.sp,
+1035-                                                        color = MaterialTheme.colorScheme.secondary
+1036-                                                    )
+1037-                                                    OutlinedTextField(
+1038-                                                        value = pendingImageInstruction,
+1039-                                                        onValueChange = { viewModel.updatePendingImageInstruction(it) },
+1040-                                                        placeholder = {
+1041-                                                            Text(
+1042-                                                                "Tell Gemini what to do... (e.g. 'Extract receipt todos')",
+1043-                                                                fontSize = 12.sp
+1044-                                                            )
+1045-                                                        },
+1046-                                                        modifier = Modifier.fillMaxWidth(),
+1047-                                                        textStyle = TextStyle(fontSize = 13.sp),
+1048-                                                        colors = OutlinedTextFieldDefaults.colors(
+1049-                                                            focusedContainerColor = MaterialTheme.colorScheme.background,
+1050-                                                            unfocusedContainerColor = MaterialTheme.colorScheme.background
+1051-                                                        ),
+1052-                                                        shape = RoundedCornerShape(12.dp)
+1053-                                                    )
+1054-                                                }
+1055-                                            }
+1056-
+1057-                                            Row(
+1058-                                                modifier = Modifier.fillMaxWidth(),
+1059-                                                horizontalArrangement = Arrangement.End,
+1060-                                                verticalAlignment = Alignment.CenterVertically
+1061-                                            ) {
+1062-                                                TextButton(onClick = { viewModel.cancelPendingImage() }) {
+1063-                                                    Text("Cancel", color = Color.Red.copy(alpha = 0.8f))
+1064-                                                }
+1065-                                                Spacer(modifier = Modifier.width(8.dp))
+1066-                                                Button(
+1067-                                                    onClick = { viewModel.processStagedImage() },
+1068-                                                    colors = ButtonDefaults.buttonColors(
+1069-                                                        containerColor = MaterialTheme.colorScheme.primary
+1070-                                                    ),
+1071-                                                    shape = RoundedCornerShape(16.dp)
+1072-                                                ) {
+1073-                                                    Text("Synthesize Screenshot", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+1074-                                                }
+1075-                                            }
+1076-                                        }
+1077-                                    }
+1078-                                }
+1079-                            }
+1080-
+1081-                            // Processing state and errors
+1082-                            item {
+1083-                                AnimatedVisibility(
+1084-                                    visible = isProcessing,
+1085-                                    enter = fadeIn() + expandVertically(),
+1086-                                    exit = fadeOut() + shrinkVertically()
+1087-                                ) {
+1088-                                    Box(
+1089-                                        modifier = Modifier
+1090-                                            .fillMaxWidth()
+1091-                                            .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+1092-                                            .border(0.5.dp, MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(16.dp))
+1093-                                            .padding(16.dp)
+1094-                                    ) {
+1095-                                        Row(
+1096-                                            verticalAlignment = Alignment.CenterVertically,
+1097-                                            horizontalArrangement = Arrangement.Center,
+1098-                                            modifier = Modifier.fillMaxWidth()
+1099-                                        ) {
+1100-                                            CircularProgressIndicator(
+1101-                                                color = MaterialTheme.colorScheme.primary,
+1102-                                                strokeWidth = 2.dp,
+1103-                                                modifier = Modifier.size(16.dp)
+1104-                                            )
+1105-                                            Spacer(modifier = Modifier.width(12.dp))
+1106-                                            Text(
+1107-                                                text = processingMsg,
+1108-                                                fontFamily = FontFamily.Monospace,
+1109-                                                fontWeight = FontWeight.Bold,
+1110-                                                fontSize = 11.sp,
+1111-                                                color = MaterialTheme.colorScheme.onBackground
+1112-                                            )
+1113-                                        }
+1114-                                    }
+1115-                                }
+1116-
+1117-                                Spacer(modifier = Modifier.height(4.dp))
+1118-
+1119-                                AnimatedVisibility(
+1120-                                    visible = errorMsg != null,
+1121-                                    enter = fadeIn() + expandVertically(),
+1122-                                    exit = fadeOut() + shrinkVertically()
+1123-                                ) {
+1124-                                    Box(
+1125-                                        modifier = Modifier
+1126-                                            .fillMaxWidth()
+1127-                                            .background(Color.Red.copy(alpha = 0.08f), shape = RoundedCornerShape(16.dp))
+1128-                                            .border(1.dp, Color.Red, shape = RoundedCornerShape(16.dp))
+1129-                                            .padding(16.dp)
+1130-                                            .clickable { viewModel.dismissError() }
+1131-                                    ) {
+1132-                                        Column {
+1133-                                            Text(
+1134-                                                text = "API Exception Warning",
+1135-                                                fontFamily = FontFamily.Monospace,
+1136-                                                fontWeight = FontWeight.Black,
+1137-                                                fontSize = 11.sp,
+1138-                                                color = Color.Red
+1139-                                            )
+1140-                                            Spacer(modifier = Modifier.height(4.dp))
+1141-                                            Text(
+1142-                                                text = errorMsg ?: "",
+1143-                                                fontFamily = FontFamily.SansSerif,
+1144-                                                fontSize = 13.sp,
+1145-                                                color = MaterialTheme.colorScheme.onBackground
+1146-                                            )
+1147-                                        }
+1148-                                    }
+1149-                                }
+1150-                            }
+1151-
+1152-                            if (filteredCards.isEmpty()) {
+1153-                                item {
+1154-                                    Box(
+1155-                                        modifier = Modifier
+1156-                                            .fillMaxWidth()
+1157-                                            .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(18.dp))
+1158-                                            .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), shape = RoundedCornerShape(18.dp))
+1159-                                            .padding(vertical = 32.dp, horizontal = 24.dp),
+1160-                                        contentAlignment = Alignment.Center
+1161-                                    ) {
+1162-                                        Column(
+1163-                                            horizontalAlignment = Alignment.CenterHorizontally,
+1164-                                            verticalArrangement = Arrangement.Center
+1165-                                        ) {
+1166-                                            Icon(
+1167-                                                imageVector = Lucide.Memories,
+1168-                                                contentDescription = null,
+1169-                                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+1170-                                                modifier = Modifier.size(24.dp)
+1171-                                            )
+1172-                                            Spacer(modifier = Modifier.height(16.dp))
+1173-                                            Text(
+1174-                                                text = "Your slate is empty",
+1175-                                                fontFamily = FontFamily.SansSerif,
+1176-                                                fontWeight = FontWeight.Bold,
+1177-                                                fontSize = 13.sp,
+1178-                                                color = MaterialTheme.colorScheme.onSurface
+1179-                                            )
+1180-                                            Spacer(modifier = Modifier.height(6.dp))
+1181-                                            Text(
+1182-                                                text = "Dumping your mind",
+1183-                                                fontFamily = FontFamily.SansSerif,
+1184-                                                fontWeight = FontWeight.Medium,
+1185-                                                fontSize = 11.sp,
+1186-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+1187-                                            )
+1188-                                        }
+1189-                                    }
+1190-                                }
+1191-                            } else {
+1192-                                // RENDER DATE GROUPS STAGGERED GRID COLUMN LAYOUT
+1193-                                sortedDates.forEachIndexed { index, dateStr ->
+1194-                                    item(key = "hdr_$dateStr") {
+1195-                                        Row(
+1196-                                            modifier = Modifier
+1197-                                                .fillMaxWidth()
+1198-                                                .padding(
+1199-                                                    top = if (index == 0 && !isRecording && pendingImageUri == null && !isProcessing && errorMsg == null) 0.dp else 4.dp,
+1200-                                                    bottom = 4.dp
+1201-                                                ),
+1202-                                            verticalAlignment = Alignment.CenterVertically,
+1203-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+1204-                                        ) {
+1205-                                            Text(
+1206-                                                text = dateStr,
+1207-                                                fontFamily = FontFamily.SansSerif,
+1208-                                                fontWeight = FontWeight.Medium,
+1209-                                                fontSize = 16.sp,
+1210-                                                color = MaterialTheme.colorScheme.onSurface, // only #ffffff and medium weight, 16px/sp as requested
+1211-                                                style = TextStyle(letterSpacing = 0.2.sp)
+1212-                                            )
+1213-                                            Box(
+1214-                                                modifier = Modifier
+1215-                                                    .weight(1f)
+1216-                                                    .height(0.5.dp)
+1217-                                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+1218-                                            )
+1219-                                        }
+1220-                                    }
+1221-
+1222-                                    val cardsInGroup = cardsByDate[dateStr] ?: emptyList()
+1223-                                    val partitioner = GroupPartitioner()
+1224-                                    val rowPartitions = partitioner.partition(cardsInGroup)
+1225-
+1226-                                    items(rowPartitions) { row ->
+1227-                                        when (row) {
+1228-                                            is GroupPartitioner.GridRow.SingleFullWidth -> {
+1229-                                                AlterCardItemWrapper(
+1230-                                                    card = row.card,
+1231-                                                    highlightedCardId = highlightedCardId,
+1232-                                                    activePlayingPath = activePlayingPath,
+1233-                                                    isAudioPlaying = isAudioPlaying,
+1234-                                                    onPlayPauseAudio = { playAudio(it) },
+1235-                                                    onOpenImage = { fullImageToOpen = it },
+1236-                                                    onDelete = { cardToDeleteSoft = it },
+1237-                                                    onEdit = { cardToEdit = it },
+1238-                                                    clipboardManager = clipboardManager,
+1239-                                                    context = context,
+1240-                                                    viewModel = viewModel,
+1241-                                                    todoRemindersMap = todoRemindersMap,
+1242-                                                    onHapticClick = { triggerHaptic() },
+1243-                                                    onCardClick = { detailCardToShow = it }
+1244-                                                )
+1245-                                            }
+1246-                                            is GroupPartitioner.GridRow.PairHalfWidth -> {
+1247-                                                Row(
+1248-                                                    modifier = Modifier.fillMaxWidth(),
+1249-                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+1250-                                                ) {
+1251-                                                    Box(modifier = Modifier.weight(1f)) {
+1252-                                                        AlterCardItemWrapper(
+1253-                                                            card = row.left,
+1254-                                                            highlightedCardId = highlightedCardId,
+1255-                                                            activePlayingPath = activePlayingPath,
+1256-                                                            isAudioPlaying = isAudioPlaying,
+1257-                                                            onPlayPauseAudio = { playAudio(it) },
+1258-                                                            onOpenImage = { fullImageToOpen = it },
+1259-                                                            onDelete = { cardToDeleteSoft = it },
+1260-                                                            onEdit = { cardToEdit = it },
+1261-                                                            clipboardManager = clipboardManager,
+1262-                                                            context = context,
+1263-                                                            viewModel = viewModel,
+1264-                                                            todoRemindersMap = todoRemindersMap,
+1265-                                                            onHapticClick = { triggerHaptic() },
+1266-                                                            onCardClick = { detailCardToShow = it }
+1267-                                                        )
+1268-                                                    }
+1269-                                                    Box(modifier = Modifier.weight(1f)) {
+1270-                                                        AlterCardItemWrapper(
+1271-                                                            card = row.right,
+1272-                                                            highlightedCardId = highlightedCardId,
+1273-                                                            activePlayingPath = activePlayingPath,
+1274-                                                            isAudioPlaying = isAudioPlaying,
+1275-                                                            onPlayPauseAudio = { playAudio(it) },
+1276-                                                            onOpenImage = { fullImageToOpen = it },
+1277-                                                            onDelete = { cardToDeleteSoft = it },
+1278-                                                            onEdit = { cardToEdit = it },
+1279-                                                            clipboardManager = clipboardManager,
+1280-                                                            context = context,
+1281-                                                            viewModel = viewModel,

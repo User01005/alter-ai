@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_item_frame"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:id="@+id/widget_item_root"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:paddingLeft="4dp"
+        android:paddingRight="4dp">
+
+        <!-- Checkbox Button (Click to complete) -->
+        <ImageView
+            android:id="@+id/widget_item_checkbox"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginRight="10dp"
+            android:src="@drawable/ic_checkbox_unchecked"
+            android:scaleType="centerInside"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Task TextView (Click to open app) -->
+        <TextView
+            android:id="@+id/widget_item_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <!-- Disintegration Particle Overlay for dissolve animation -->
+    <ImageView
+        android:id="@+id/widget_item_particle_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+</FrameLayout>

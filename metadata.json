@@ -1,0 +1,8 @@
+{
+  "name": " ALTER with AI 2",
+  "description": "more than breakdown\n",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
